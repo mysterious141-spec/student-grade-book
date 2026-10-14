@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Grade Book</title>
+<style>
+  :root { --bg:#17132b; --card:#221c40; --line:#3a3260; --text:#ece9fb; --muted:#a59fcb; --accent:#a78bfa; --ok:#4ade80; --bad:#f87171; --warn:#fbbf24; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); padding:16px; }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:8px 0 2px; }
+  .sub { color:var(--muted); margin:0 0 16px; font-size:.92rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  h2 { font-size:1.05rem; margin:0 0 10px; color:var(--accent); }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+  .stat { background:#1b1635; border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .stat b { display:block; font-size:1.3rem; }
+  .stat span { color:var(--muted); font-size:.8rem; }
+  .tablewrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:.92rem; }
+  th, td { padding:8px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th:nth-child(1), td:nth-child(1), th:nth-child(2), td:nth-child(2) { text-align:left; }
+  th { color:var(--muted); font-weight:600; }
+  tbody tr { cursor:pointer; }
+  tbody tr:hover { background:#2b2450; }
+  tbody tr.sel { background:#3a2f70; }
+  td.low { color:var(--bad); }
+  .g { display:inline-block; min-width:24px; text-align:center; border-radius:6px; padding:1px 6px; font-weight:700; color:#10101a; }
+  .gA { background:var(--ok); } .gB { background:#86efac; } .gC { background:var(--warn); } .gD { background:#fdba74; } .gF { background:var(--bad); }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  label { font-size:.85rem; color:var(--muted); }
+  input, select { background:#1b1635; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:.95rem; min-width:0; }
+  input[type=text] { flex:1 1 140px; }
+  input[type=number] { width:100px; }
+  button { background:var(--accent); color:#17132b; border:0; border-radius:8px; padding:9px 14px; font-weight:700; cursor:pointer; font-size:.92rem; }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .msg { min-height:1.3em; margin-top:10px; font-size:.92rem; }
+  .msg.ok { color:var(--ok); } .msg.err { color:var(--bad); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px) { .two { grid-template-columns:1fr; } }
+  .scores { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:8px 0; }
+  @media (max-width:520px) { .scores { grid-template-columns:repeat(2,1fr); } }
+  .scores input { width:100%; }
+  .rank { margin:0; padding-left:20px; } .rank li { padding:3px 0; }
+  .foot { color:var(--muted); font-size:.82rem; text-align:center; margin:18px 0 6px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Student Grade Book</h1>
+  <p class="sub">Built with a 1D array of names and a 2D array of scores (students x subjects). Click a student row to edit scores.</p>
+
+  <div class="card"><div class="stats" id="stats"></div></div>
+
+  <div class="card">
+    <h2>Students</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr id="head"></tr></thead>
+        <tbody id="body"></tbody>
+      </table>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <input type="text" id="search" placeholder="Search by name">
+      <button class="ghost" id="clearSearch">Clear</button>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h2>Edit a score</h2>
+      <p class="sub" id="selLabel" style="margin:0 0 8px">No student selected.</p>
+      <div class="row">
+        <select id="subject"></select>
+        <input type="number" id="newScore" min="0" max="100" step="1" placeholder="0-100">
+        <button id="updateBtn" disabled>Update</button>
+      </div>
+      <div class="msg" id="msgEdit"></div>
+    </div>
+    <div class="card">
+      <h2>Add a student</h2>
+      <input type="text" id="newName" placeholder="Student name" style="width:100%">
+      <div class="scores" id="newScores"></div>
+      <div class="row"><button id="addBtn">Add student</button></div>
+      <div class="msg" id="msgAdd"></div>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card"><h2>Subject statistics</h2><div class="tablewrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th></tr></thead><tbody id="subjStats"></tbody></table></div></div>
+    <div class="card"><h2>Class ranking</h2><ol class="rank" id="rank"></ol></div>
+  </div>
+
+  <div class="row" style="justify-content:center"><button class="ghost" id="resetBtn">Reset to starting data</button></div>
+  <p class="foot">Source code: <a href="https://github.com/mysterious141-spec/student-grade-book" target="_blank" rel="noopener">github.com/mysterious141-spec/student-grade-book</a></p>
+</div>
+
+<script>
+const MAX_STUDENTS = 10;
+const SUBJECTS = ["Maths", "English", "Science", "ICT"];
+const KEY = "studentGradeBookData";
+
+let names = new Array(MAX_STUDENTS);
+let scores = [];            // 2D array: scores[i][j]
+for (let i = 0; i < MAX_STUDENTS; i++) scores.push(new Array(SUBJECTS.length).fill(0));
+let count = 0;
+let selected = -1;
+let filter = "";
+
+const $ = id => document.getElementById(id);
+
+function addStudent(name, marks) {
+  names[count] = name;
+  for (let j = 0; j < SUBJECTS.length; j++) scores[count][j] = marks[j];
+  count++;
+}
+function seed() {
+  count = 0;
+  addStudent("Ama", [78, 85, 72, 90]);
+  addStudent("Kofi", [64, 58, 70, 66]);
+  addStudent("Esi", [92, 88, 95, 97]);
+  addStudent("Yaw", [45, 52, 48, 60]);
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify({ names: names.slice(0, count), scores: scores.slice(0, count), count })); } catch (e) {}
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY));
+    if (d && d.count >= 0 && d.count <= MAX_STUDENTS && Array.isArray(d.names) && Array.isArray(d.scores)) {
+      count = 0;
+      for (let i = 0; i < d.count; i++) {
+        if (typeof d.names[i] === "string" && Array.isArray(d.scores[i]) && d.scores[i].length === SUBJECTS.length && d.scores[i].every(x => typeof x === "number")) addStudent(d.names[i], d.scores[i]);
+      }
+      return count > 0;
+    }
+  } catch (e) {}
+  return false;
+}
+function average(i) {
+  let total = 0;
+  for (let j = 0; j < SUBJECTS.length; j++) total += scores[i][j];
+  return total / SUBJECTS.length;
+}
+function grade(avg) { return avg >= 80 ? "A" : avg >= 70 ? "B" : avg >= 60 ? "C" : avg >= 50 ? "D" : "F"; }
+function indexOf(name) {
+  for (let i = 0; i < count; i++) if (names[i].toLowerCase() === name.toLowerCase()) return i;
+  return -1;
+}
+function cell(text, cls) { const td = document.createElement("td"); td.textContent = text; if (cls) td.className = cls; return td; }
+
+function drawTable() {
+  const head = $("head"); head.textContent = "";
+  ["No.", "Name", ...SUBJECTS, "Average", "Grade"].forEach(h => { const th = document.createElement("th"); th.textContent = h; head.appendChild(th); });
+  const body = $("body"); body.textContent = "";
+  let shown = 0;
+  for (let i = 0; i < count; i++) {
+    if (filter && !names[i].toLowerCase().includes(filter)) continue;
+    shown++;
+    const tr = document.createElement("tr");
+    if (i === selected) tr.className = "sel";
+    tr.appendChild(cell(i + 1));
+    tr.appendChild(cell(names[i]));
+    for (let j = 0; j < SUBJECTS.length; j++) tr.appendChild(cell(scores[i][j], scores[i][j] < 50 ? "low" : ""));
+    const avg = average(i);
+    tr.appendChild(cell(avg.toFixed(1)));
+    const g = document.createElement("td"); const sp = document.createElem
